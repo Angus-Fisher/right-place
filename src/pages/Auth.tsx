@@ -1,0 +1,34 @@
+
+import { useAuth } from '@/hooks/useAuth';
+import { AuthPage } from '@/components/AuthPage';
+import { useEffect } from 'react';
+
+const Auth = () => {
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    // Redirect authenticated users to main page
+    if (user && !loading) {
+      window.location.href = '/';
+    }
+  }, [user, loading]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (user) {
+    return null; // Will redirect via useEffect
+  }
+
+  return <AuthPage />;
+};
+
+export default Auth;
