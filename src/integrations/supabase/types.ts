@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_credentials: {
+        Row: {
+          additional_config: Json | null
+          api_key: string
+          created_at: string
+          id: string
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          additional_config?: Json | null
+          api_key: string
+          created_at?: string
+          id?: string
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          additional_config?: Json | null
+          api_key?: string
+          created_at?: string
+          id?: string
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -43,7 +70,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_api_credential: {
+        Args: { provider_name: string }
+        Returns: string
+      }
+      upsert_api_credential: {
+        Args: { provider_name: string; new_api_key: string; config?: Json }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
