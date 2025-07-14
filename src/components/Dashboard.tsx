@@ -2,12 +2,14 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building, LogOut, User, DollarSign, CreditCard, TrendingUp } from 'lucide-react';
+import { Building, LogOut, User, DollarSign, CreditCard, TrendingUp, Link } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 export const Dashboard = () => {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSignOut = async () => {
     const { error } = await signOut();
@@ -40,6 +42,15 @@ export const Dashboard = () => {
             </div>
             
             <div className="flex items-center space-x-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/connections')}
+                className="flex items-center space-x-2"
+              >
+                <Link className="h-4 w-4" />
+                <span>Connections</span>
+              </Button>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <User className="h-4 w-4" />
                 <span>Welcome, {user?.email}</span>
@@ -133,6 +144,16 @@ export const Dashboard = () => {
                   Connect and manage multiple bank accounts from different providers in one place.
                 </p>
               </div>
+            </div>
+            
+            <div className="mt-6">
+              <Button 
+                onClick={() => navigate('/connections')}
+                className="flex items-center space-x-2"
+              >
+                <Link className="h-4 w-4" />
+                <span>Connect Your Accounts</span>
+              </Button>
             </div>
           </CardContent>
         </Card>
