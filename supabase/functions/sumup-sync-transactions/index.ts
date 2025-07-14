@@ -27,7 +27,7 @@ serve(async (req) => {
       )
     }
 
-    // Get user's SumUp access token
+    // Get user's SumUp access token (from authorization code flow)
     const { data: tokenData, error: tokenError } = await supabaseClient
       .from('user_tokens')
       .select('access_token, token_type')
@@ -42,7 +42,7 @@ serve(async (req) => {
       )
     }
 
-    // Fetch transactions from SumUp API
+    // Fetch transactions from SumUp API using the user's access token
     const sumupResponse = await fetch('https://api.sumup.com/v0.1/me/transactions', {
       headers: {
         'Authorization': `${tokenData.token_type} ${tokenData.access_token}`,

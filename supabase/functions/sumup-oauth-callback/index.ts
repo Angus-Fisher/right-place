@@ -105,7 +105,7 @@ serve(async (req) => {
 
     const [clientId, clientSecret] = credentialsData.split(':')
 
-    // Exchange code for access token
+    // Exchange authorization code for access token using authorization code flow
     const tokenResponse = await fetch('https://api.sumup.com/token', {
       method: 'POST',
       headers: {
@@ -142,7 +142,7 @@ serve(async (req) => {
 
     const tokenData = await tokenResponse.json()
 
-    // Store the access token
+    // Store the access token for the user
     const { error: tokenError } = await supabaseClient
       .from('user_tokens')
       .upsert({

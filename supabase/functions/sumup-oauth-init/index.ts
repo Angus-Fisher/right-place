@@ -78,9 +78,9 @@ serve(async (req) => {
       )
     }
 
-    // Build SumUp OAuth URL
+    // Build SumUp OAuth URL for authorization code flow
     const redirectUri = `${Deno.env.get('SUPABASE_URL')}/functions/v1/sumup-oauth-callback`
-    const scope = 'payments'
+    const scope = 'transactions:read'
     
     const authUrl = new URL('https://api.sumup.com/authorize')
     authUrl.searchParams.set('response_type', 'code')
