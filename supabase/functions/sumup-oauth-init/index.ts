@@ -99,7 +99,7 @@ serve(async (req) => {
     
     // Build authorization URL according to SumUp's Authorization Code flow
     // Updated scope to include user profile permissions and use spaces instead of + encoding
-    const scope = 'transactions.history user.profile user.profile_readonly'
+    const scope = 'transactions.history user.profile_readonly'
     
     // Manually construct the URL to ensure spaces are preserved in the scope parameter
     const authorizationUrl = `https://api.sumup.com/authorize?response_type=code&client_id=${encodeURIComponent(client_id)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}`
