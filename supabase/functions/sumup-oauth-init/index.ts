@@ -98,11 +98,12 @@ serve(async (req) => {
     console.log('Using redirect URI:', redirectUri)
     
     // Build authorization URL according to SumUp's Authorization Code flow
+    // Updated scope to include user profile permissions
     const authParams = new URLSearchParams({
       response_type: 'code',
       client_id: client_id,
       redirect_uri: redirectUri,
-      scope: 'transactions.history',
+      scope: 'transactions.history user.profile user.profile_readonly',
       state: state
     })
 
@@ -119,7 +120,7 @@ serve(async (req) => {
     console.log('  - response_type:', 'code')
     console.log('  - client_id:', client_id)
     console.log('  - redirect_uri:', redirectUri)
-    console.log('  - scope:', 'transactions.history')
+    console.log('  - scope:', 'transactions.history user.profile user.profile_readonly')
     console.log('  - state:', state)
     console.log('=== END REQUEST DETAILS ===')
 
