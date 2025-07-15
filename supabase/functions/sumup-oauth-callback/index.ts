@@ -13,42 +13,20 @@ serve(async (req) => {
 
     console.log('OAuth callback params:', { code: !!code, state: !!state, error })
 
+    // Get the app URL from the request origin or use a default
+    const origin = req.headers.get('origin') || 'https://xjvbxjpiebtvdmxyeuhr.supabase.co'
+    const appUrl = origin.includes('supabase.co') ? 
+      `https://${origin.split('//')[1].split('.')[0]}.lovableproject.com` : 
+      origin
+
     if (error) {
       console.error('OAuth error:', error)
-      return new Response(`
-        <html>
-          <body>
-            <h1>Authorization Failed</h1>
-            <p>Error: ${error}</p>
-            <script>
-              setTimeout(() => {
-                window.close()
-              }, 3000)
-            </script>
-          </body>
-        </html>
-      `, {
-        headers: { 'Content-Type': 'text/html' }
-      })
+      return Response.redirect(`${appUrl}/connections?sumup=error&message=${encodeURIComponent(error)}`)
     }
 
     if (!code || !state) {
       console.error('Missing code or state parameter')
-      return new Response(`
-        <html>
-          <body>
-            <h1>Authorization Failed</h1>
-            <p>Missing authorization code or state parameter</p>
-            <script>
-              setTimeout(() => {
-                window.close()
-              }, 3000)
-            </script>
-          </body>
-        </html>
-      `, {
-        headers: { 'Content-Type': 'text/html' }
-      })
+      return Response.redirect(`${appUrl}/connections?sumup=error&message=${encodeURIComponent('Missing authorization parameters')}`)
     }
 
     // Create Supabase client with service role key for admin operations
@@ -57,21 +35,7 @@ serve(async (req) => {
     
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('Missing Supabase environment variables')
-      return new Response(`
-        <html>
-          <body>
-            <h1>Configuration Error</h1>
-            <p>Missing Supabase configuration</p>
-            <script>
-              setTimeout(() => {
-                window.close()
-              }, 3000)
-            </script>
-          </body>
-        </html>
-      `, {
-        headers: { 'Content-Type': 'text/html' }
-      })
+      return Response.redirect(`${appUrl}/connections?sumup=error&message=${encodeURIComponent('Configuration error')}`)
     }
 
     console.log('Creating Supabase client with service role key')
@@ -90,40 +54,12 @@ serve(async (req) => {
 
     if (stateError) {
       console.error('Error verifying state parameter:', stateError)
-      return new Response(`
-        <html>
-          <body>
-            <h1>Authorization Failed</h1>
-            <p>Error verifying state parameter: ${stateError.message}</p>
-            <script>
-              setTimeout(() => {
-                window.close()
-              }, 3000)
-            </script>
-          </body>
-        </html>
-      `, {
-        headers: { 'Content-Type': 'text/html' }
-      })
+      return Response.redirect(`${appUrl}/connections?sumup=error&message=${encodeURIComponent('State verification failed')}`)
     }
 
     if (!stateData) {
       console.error('Invalid state parameter - no matching record found')
-      return new Response(`
-        <html>
-          <body>
-            <h1>Authorization Failed</h1>
-            <p>Invalid state parameter</p>
-            <script>
-              setTimeout(() => {
-                window.close()
-              }, 3000)
-            </script>
-          </body>
-        </html>
-      `, {
-        headers: { 'Content-Type': 'text/html' }
-      })
+      return Response.redirect(`${appUrl}/connections?sumup=error&message=${encodeURIComponent('Invalid state parameter')}`)
     }
 
     const userId = stateData.user_id
@@ -136,42 +72,14 @@ serve(async (req) => {
 
     if (credentialsError || !credentials) {
       console.error('Error getting SumUp credentials:', credentialsError)
-      return new Response(`
-        <html>
-          <body>
-            <h1>Configuration Error</h1>
-            <p>SumUp credentials not configured</p>
-            <script>
-              setTimeout(() => {
-                window.close()
-              }, 3000)
-            </script>
-          </body>
-        </html>
-      `, {
-        headers: { 'Content-Type': 'text/html' }
-      })
+      return Response.redirect(`${appUrl}/connections?sumup=error&message=${encodeURIComponent('SumUp credentials not configured')}`)
     }
 
     const { client_id, client_secret } = credentials
 
     if (!client_id || !client_secret) {
       console.error('Missing client_id or client_secret')
-      return new Response(`
-        <html>
-          <body>
-            <h1>Configuration Error</h1>
-            <p>SumUp client credentials not properly configured</p>
-            <script>
-              setTimeout () => {
-                window.close()
-              }, 3000)
-            </script>
-          </body>
-        </html>
-      `, {
-        headers: { 'Content-Type': 'text/html' }
-      })
+      return Response.redirect(`${appUrl}/connections?sumup=error&message=${encodeURIComponent('SumUp client credentials not configured')}`)
     }
 
     console.log('Exchanging authorization code for access token...')
@@ -214,23 +122,7 @@ serve(async (req) => {
 
     if (!tokenResponse.ok) {
       console.error('Token exchange failed:', responseText)
-      return new Response(`
-        <html>
-          <body>
-            <h1>Token Exchange Failed</h1>
-            <p>Failed to exchange authorization code for access token</p>
-            <p>Status: ${tokenResponse.status}</p>
-            <p>Error: ${responseText}</p>
-            <script>
-              setTimeout(() => {
-                window.close()
-              }, 3000)
-            </script>
-          </body>
-        </html>
-      `, {
-        headers: { 'Content-Type': 'text/html' }
-      })
+      return Response.redirect(`${appUrl}/connections?sumup=error&message=${encodeURIComponent('Failed to exchange authorization code')}`)
     }
 
     let tokenData
@@ -238,21 +130,7 @@ serve(async (req) => {
       tokenData = JSON.parse(responseText)
     } catch (parseError) {
       console.error('Failed to parse token response:', parseError)
-      return new Response(`
-        <html>
-          <body>
-            <h1>Token Parse Error</h1>
-            <p>Failed to parse token response</p>
-            <script>
-              setTimeout(() => {
-                window.close()
-              }, 3000)
-            </script>
-          </body>
-        </html>
-      `, {
-        headers: { 'Content-Type': 'text/html' }
-      })
+      return Response.redirect(`${appUrl}/connections?sumup=error&message=${encodeURIComponent('Failed to parse token response')}`)
     }
 
     console.log('Token data received:', { 
@@ -280,21 +158,7 @@ serve(async (req) => {
 
     if (tokenError) {
       console.error('Error storing token:', tokenError)
-      return new Response(`
-        <html>
-          <body>
-            <h1>Storage Error</h1>
-            <p>Failed to store access token: ${tokenError.message}</p>
-            <script>
-              setTimeout(() => {
-                window.close()
-              }, 3000)
-            </script>
-          </body>
-        </html>
-      `, {
-        headers: { 'Content-Type': 'text/html' }
-      })
+      return Response.redirect(`${appUrl}/connections?sumup=error&message=${encodeURIComponent('Failed to store access token')}`)
     }
 
     // Clean up the OAuth state tokens
@@ -307,41 +171,15 @@ serve(async (req) => {
 
     console.log('OAuth flow completed successfully')
 
-    // Success page
-    return new Response(`
-      <html>
-        <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-          <h1 style="color: #10b981;">SumUp Connected Successfully!</h1>
-          <p>Your SumUp account has been connected with scope: ${tokenData.scope || 'transactions.history'}</p>
-          <p>You can now close this window and return to the application.</p>
-          <script>
-            setTimeout(() => {
-              window.close()
-            }, 3000)
-          </script>
-        </body>
-      </html>
-    `, {
-      headers: { 'Content-Type': 'text/html' }
-    })
+    // Redirect back to the connections page with success indicator
+    return Response.redirect(`${appUrl}/connections?sumup=connected`)
 
   } catch (error) {
     console.error('OAuth callback error:', error)
-    return new Response(`
-      <html>
-        <body>
-          <h1>Authorization Error</h1>
-          <p>An unexpected error occurred during authorization</p>
-          <p>Error: ${error.message}</p>
-          <script>
-            setTimeout(() => {
-              window.close()
-            }, 3000)
-          </script>
-        </body>
-      </html>
-    `, {
-      headers: { 'Content-Type': 'text/html' }
-    })
+    const origin = req.headers.get('origin') || 'https://xjvbxjpiebtvdmxyeuhr.supabase.co'
+    const appUrl = origin.includes('supabase.co') ? 
+      `https://${origin.split('//')[1].split('.')[0]}.lovableproject.com` : 
+      origin
+    return Response.redirect(`${appUrl}/connections?sumup=error&message=${encodeURIComponent('Unexpected error occurred')}`)
   }
 })

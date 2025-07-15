@@ -17,7 +17,33 @@ export const SumUpConnection = () => {
 
   useEffect(() => {
     checkConnectionStatus();
+    handleOAuthCallback();
   }, [user]);
+
+  const handleOAuthCallback = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sumupStatus = urlParams.get('sumup');
+    const errorMessage = urlParams.get('message');
+
+    if (sumupStatus === 'connected') {
+      toast({
+        title: "SumUp Connected",
+        description: "Your SumUp account has been connected successfully!",
+      });
+      // Clean up URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+      // Refresh connection status
+      setTimeout(() => checkConnectionStatus(), 1000);
+    } else if (sumupStatus === 'error') {
+      toast({
+        title: "Connection Failed",
+        description: errorMessage || "Failed to connect SumUp account. Please try again.",
+        variant: "destructive",
+      });
+      // Clean up URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  };
 
   const checkConnectionStatus = async () => {
     if (!user) return;
