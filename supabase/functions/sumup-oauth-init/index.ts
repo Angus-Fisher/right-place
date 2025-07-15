@@ -109,6 +109,51 @@ serve(async (req) => {
     const authorizationUrl = `https://api.sumup.com/authorize?${authParams.toString()}`
     console.log('Built authorization URL:', authorizationUrl)
 
+    // Log the exact request details that would be made to SumUp
+    console.log('=== SUMUP AUTHORIZATION REQUEST DETAILS ===')
+    console.log('Method: GET')
+    console.log('URL:', authorizationUrl)
+    console.log('Headers: None (browser redirect)')
+    console.log('Body: None (GET request)')
+    console.log('Query Parameters:')
+    console.log('  - response_type:', 'code')
+    console.log('  - client_id:', client_id)
+    console.log('  - redirect_uri:', redirectUri)
+    console.log('  - scope:', 'payments.read')
+    console.log('  - state:', state)
+    console.log('=== END REQUEST DETAILS ===')
+
+    // Test the authorization URL by making a HEAD request to check if it's accessible
+    console.log('Testing authorization URL accessibility...')
+    try {
+      const testResponse = await fetch(authorizationUrl, {
+        method: 'HEAD',
+        headers: {
+          'User-Agent': 'Supabase-Edge-Function/1.0'
+        }
+      })
+      console.log('Authorization URL test response status:', testResponse.status)
+      console.log('Authorization URL test response headers:', Object.fromEntries(testResponse.headers.entries()))
+      
+      if (!testResponse.ok) {
+        console.error('Authorization URL test failed with status:', testResponse.status)
+        // Try to get the response body for more details
+        try {
+          const testResponseText = await fetch(authorizationUrl, {
+            method: 'GET',
+            headers: {
+              'User-Agent': 'Supabase-Edge-Function/1.0'
+            }
+          }).then(r => r.text())
+          console.log('Authorization URL test response body:', testResponseText)
+        } catch (bodyError) {
+          console.error('Could not read test response body:', bodyError)
+        }
+      }
+    } catch (testError) {
+      console.error('Error testing authorization URL:', testError)
+    }
+
     return new Response(
       JSON.stringify({ authorization_url: authorizationUrl }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
