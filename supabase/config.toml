@@ -1,1 +1,5 @@
+
 project_id = "xjvbxjpiebtvdmxyeuhr"
+
+[functions.sumup-oauth-callback]
+verify_jwt = false
