@@ -27,31 +27,21 @@ serve(async (req) => {
       )
     }
 
-    // Get SumUp API credentials
-    const { data: credentialsData, error: credentialsError } = await supabaseClient
+    // Get SumUp API key
+    const { data: apiKey, error: credentialsError } = await supabaseClient
       .rpc('get_api_credential', { provider_name: 'sumup' })
 
     if (credentialsError) {
-      console.error('Error getting SumUp credentials:', credentialsError)
+      console.error('Error getting SumUp API key:', credentialsError)
       return new Response(
-        JSON.stringify({ error: 'SumUp credentials not configured' }),
+        JSON.stringify({ error: 'SumUp API key not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    if (!credentialsData) {
+    if (!apiKey) {
       return new Response(
         JSON.stringify({ error: 'SumUp API key not found' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Parse the API key (assuming it's stored as client_id:client_secret)
-    const [clientId, clientSecret] = credentialsData.split(':')
-
-    if (!clientId || !clientSecret) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid SumUp API key format. Expected client_id:client_secret' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -84,7 +74,7 @@ serve(async (req) => {
     
     const authUrl = new URL('https://api.sumup.com/authorize')
     authUrl.searchParams.set('response_type', 'code')
-    authUrl.searchParams.set('client_id', clientId)
+    authUrl.searchParams.set('client_id', apiKey)  // Use API key as client_id
     authUrl.searchParams.set('redirect_uri', redirectUri)
     authUrl.searchParams.set('scope', scope)
     authUrl.searchParams.set('state', state)

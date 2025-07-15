@@ -80,17 +80,17 @@ serve(async (req) => {
 
     const userId = stateData.user_id
 
-    // Get SumUp API credentials
-    const { data: credentialsData, error: credentialsError } = await supabaseClient
+    // Get SumUp API key
+    const { data: apiKey, error: credentialsError } = await supabaseClient
       .rpc('get_api_credential', { provider_name: 'sumup' })
 
-    if (credentialsError || !credentialsData) {
-      console.error('Error getting SumUp credentials:', credentialsError)
+    if (credentialsError || !apiKey) {
+      console.error('Error getting SumUp API key:', credentialsError)
       return new Response(`
         <html>
           <body>
             <h1>Configuration Error</h1>
-            <p>SumUp credentials not configured</p>
+            <p>SumUp API key not configured</p>
             <script>
               setTimeout(() => {
                 window.close()
@@ -103,18 +103,15 @@ serve(async (req) => {
       })
     }
 
-    const [clientId, clientSecret] = credentialsData.split(':')
-
     // Exchange authorization code for access token using authorization code flow
     const tokenResponse = await fetch('https://api.sumup.com/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Bearer ${apiKey}`  // Use API key for authentication
       },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
-        client_id: clientId,
-        client_secret: clientSecret,
         code: code,
         redirect_uri: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sumup-oauth-callback`
       })
