@@ -98,16 +98,12 @@ serve(async (req) => {
     console.log('Using redirect URI:', redirectUri)
     
     // Build authorization URL according to SumUp's Authorization Code flow
-    // Updated scope to include user profile permissions
-    const authParams = new URLSearchParams({
-      response_type: 'code',
-      client_id: client_id,
-      redirect_uri: redirectUri,
-      scope: 'transactions.history user.profile user.profile_readonly',
-      state: state
-    })
-
-    const authorizationUrl = `https://api.sumup.com/authorize?${authParams.toString()}`
+    // Updated scope to include user profile permissions and use spaces instead of + encoding
+    const scope = 'transactions.history user.profile user.profile_readonly'
+    
+    // Manually construct the URL to ensure spaces are preserved in the scope parameter
+    const authorizationUrl = `https://api.sumup.com/authorize?response_type=code&client_id=${encodeURIComponent(client_id)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}`
+    
     console.log('Built authorization URL:', authorizationUrl)
 
     // Log the exact request details that would be made to SumUp
@@ -120,7 +116,7 @@ serve(async (req) => {
     console.log('  - response_type:', 'code')
     console.log('  - client_id:', client_id)
     console.log('  - redirect_uri:', redirectUri)
-    console.log('  - scope:', 'transactions.history user.profile user.profile_readonly')
+    console.log('  - scope:', scope)
     console.log('  - state:', state)
     console.log('=== END REQUEST DETAILS ===')
 
