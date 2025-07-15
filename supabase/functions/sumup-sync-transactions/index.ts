@@ -75,14 +75,21 @@ serve(async (req) => {
 
     const profileData = await profileResponse.json()
     console.log('Profile data received:', Object.keys(profileData))
+    console.log('Full profile data structure:', JSON.stringify(profileData, null, 2))
     
-    const merchantCode = profileData.merchant_code
+    // Try to get merchant_code from different possible locations in the response
+    let merchantCode = profileData.merchant_code
+    if (!merchantCode && profileData.merchant_profile) {
+      merchantCode = profileData.merchant_profile.merchant_code
+    }
+    
     if (!merchantCode) {
       console.error('No merchant_code found in profile response:', profileData)
       return new Response(
         JSON.stringify({ 
           error: 'No merchant_code found in SumUp profile',
-          details: 'The merchant profile response did not contain a merchant_code'
+          details: 'The merchant profile response did not contain a merchant_code in expected locations',
+          profileStructure: Object.keys(profileData)
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
