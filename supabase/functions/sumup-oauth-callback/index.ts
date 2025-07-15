@@ -3,11 +3,15 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 serve(async (req) => {
+  console.log('OAuth callback received')
+  
   try {
     const url = new URL(req.url)
     const code = url.searchParams.get('code')
     const state = url.searchParams.get('state')
     const error = url.searchParams.get('error')
+
+    console.log('OAuth callback params:', { code: !!code, state: !!state, error })
 
     if (error) {
       console.error('OAuth error:', error)
@@ -29,6 +33,7 @@ serve(async (req) => {
     }
 
     if (!code || !state) {
+      console.error('Missing code or state parameter')
       return new Response(`
         <html>
           <body>
@@ -103,19 +108,28 @@ serve(async (req) => {
       })
     }
 
+    console.log('Exchanging code for token...')
+
     // Exchange authorization code for access token using authorization code flow
+    const tokenRequestBody = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sumup-oauth-callback`
+    })
+
+    console.log('Token request body:', tokenRequestBody.toString())
+
     const tokenResponse = await fetch('https://api.sumup.com/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Bearer ${apiKey}`  // Use API key for authentication
+        'Authorization': `Bearer ${apiKey}`,
+        'Accept': 'application/json'
       },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code: code,
-        redirect_uri: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sumup-oauth-callback`
-      })
+      body: tokenRequestBody
     })
+
+    console.log('Token response status:', tokenResponse.status)
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text()
@@ -125,6 +139,7 @@ serve(async (req) => {
           <body>
             <h1>Token Exchange Failed</h1>
             <p>Failed to exchange authorization code for access token</p>
+            <p>Error: ${errorText}</p>
             <script>
               setTimeout(() => {
                 window.close()
@@ -138,6 +153,7 @@ serve(async (req) => {
     }
 
     const tokenData = await tokenResponse.json()
+    console.log('Token data received:', { hasAccessToken: !!tokenData.access_token })
 
     // Store the access token for the user
     const { error: tokenError } = await supabaseClient
