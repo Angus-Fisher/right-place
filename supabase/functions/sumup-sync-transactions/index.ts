@@ -47,62 +47,77 @@ serve(async (req) => {
 
     console.log('Using token with scope:', tokenData.scope)
 
-    // Determine the correct API endpoint based on the available scope
-    let apiEndpoint = 'https://api.sumup.com/v0.1/me/transactions'
-    
-    // If we have payments.read scope, we might need to use a different endpoint
-    if (tokenData.scope && tokenData.scope.includes('payments')) {
-      // Try the payments endpoint first
-      apiEndpoint = 'https://api.sumup.com/v0.1/me/transactions'
+    const authHeaders = {
+      'Authorization': `${tokenData.token_type || 'Bearer'} ${tokenData.access_token}`,
+      'Content-Type': 'application/json'
     }
 
-    console.log('Fetching from endpoint:', apiEndpoint)
-
-    // Fetch transactions from SumUp API using the user's access token
-    const sumupResponse = await fetch(apiEndpoint, {
-      headers: {
-        'Authorization': `${tokenData.token_type || 'Bearer'} ${tokenData.access_token}`,
-        'Content-Type': 'application/json'
-      }
+    // Step 1: Get merchant profile to obtain merchant_code
+    console.log('Step 1: Fetching merchant profile from https://api.sumup.com/v0.1/me')
+    const profileResponse = await fetch('https://api.sumup.com/v0.1/me', {
+      headers: authHeaders
     })
 
-    console.log('SumUp API response status:', sumupResponse.status)
+    console.log('Profile API response status:', profileResponse.status)
 
-    if (!sumupResponse.ok) {
-      const errorText = await sumupResponse.text()
-      console.error('SumUp API error:', errorText)
-      
-      // Try alternative endpoint if the first one fails
-      if (sumupResponse.status === 404 || sumupResponse.status === 403) {
-        console.log('Trying alternative endpoint...')
-        const altResponse = await fetch('https://api.sumup.com/v0.1/me/transactions/history', {
-          headers: {
-            'Authorization': `${tokenData.token_type || 'Bearer'} ${tokenData.access_token}`,
-            'Content-Type': 'application/json'
-          }
-        })
-        
-        if (altResponse.ok) {
-          const altData = await altResponse.json()
-          console.log('Alternative endpoint successful')
-          return processTransactions(altData, user_id, supabaseClient)
-        }
-      }
-      
+    if (!profileResponse.ok) {
+      const errorText = await profileResponse.text()
+      console.error('SumUp Profile API error:', errorText)
       return new Response(
         JSON.stringify({ 
-          error: 'Failed to fetch transactions from SumUp',
+          error: 'Failed to fetch merchant profile from SumUp',
           details: errorText,
-          status: sumupResponse.status 
+          status: profileResponse.status 
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const sumupData = await sumupResponse.json()
-    console.log('SumUp data structure:', Object.keys(sumupData))
+    const profileData = await profileResponse.json()
+    console.log('Profile data received:', Object.keys(profileData))
     
-    return processTransactions(sumupData, user_id, supabaseClient)
+    const merchantCode = profileData.merchant_code
+    if (!merchantCode) {
+      console.error('No merchant_code found in profile response:', profileData)
+      return new Response(
+        JSON.stringify({ 
+          error: 'No merchant_code found in SumUp profile',
+          details: 'The merchant profile response did not contain a merchant_code'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    console.log('Found merchant_code:', merchantCode)
+
+    // Step 2: Fetch transactions using the merchant_code
+    const transactionsEndpoint = `https://api.sumup.com/v2.1/merchants/${merchantCode}/transactions/history`
+    console.log('Step 2: Fetching transactions from:', transactionsEndpoint)
+
+    const transactionsResponse = await fetch(transactionsEndpoint, {
+      headers: authHeaders
+    })
+
+    console.log('Transactions API response status:', transactionsResponse.status)
+
+    if (!transactionsResponse.ok) {
+      const errorText = await transactionsResponse.text()
+      console.error('SumUp Transactions API error:', errorText)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to fetch transactions from SumUp',
+          details: errorText,
+          status: transactionsResponse.status,
+          endpoint: transactionsEndpoint
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const transactionsData = await transactionsResponse.json()
+    console.log('Transactions data structure:', Object.keys(transactionsData))
+    
+    return processTransactions(transactionsData, user_id, supabaseClient)
 
   } catch (error) {
     console.error('Sync transactions error:', error)
@@ -113,8 +128,8 @@ serve(async (req) => {
   }
 })
 
-async function processTransactions(sumupData: any, user_id: string, supabaseClient: any) {
-  const transactions = sumupData.items || sumupData.data || sumupData || []
+async function processTransactions(transactionsData: any, user_id: string, supabaseClient: any) {
+  const transactions = transactionsData.items || transactionsData.data || transactionsData || []
   console.log(`Processing ${transactions.length} transactions`)
 
   let syncedCount = 0
