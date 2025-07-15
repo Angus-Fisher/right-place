@@ -5,6 +5,7 @@ import { Link } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { AppHeader } from './AppHeader';
+import { TransactionHistory } from './TransactionHistory';
 
 export const Dashboard = () => {
   const { user } = useAuth();
@@ -22,7 +23,7 @@ export const Dashboard = () => {
         </div>
 
         {/* Welcome Message */}
-        <Card>
+        <Card className="mb-8">
           <CardHeader>
             <CardTitle>Welcome to Right Place</CardTitle>
             <CardDescription>
@@ -60,6 +61,9 @@ export const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Transaction History */}
+        <TransactionHistory />
       </main>
     </div>
   );
