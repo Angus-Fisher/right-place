@@ -13,11 +13,8 @@ serve(async (req) => {
 
     console.log('OAuth callback params:', { code: !!code, state: !!state, error })
 
-    // Get the app URL from the request origin or use a default
-    const origin = req.headers.get('origin') || 'https://xjvbxjpiebtvdmxyeuhr.supabase.co'
-    const appUrl = origin.includes('supabase.co') ? 
-      `https://${origin.split('//')[1].split('.')[0]}.lovableproject.com` : 
-      origin
+    // Use the correct app URL
+    const appUrl = 'https://right-place.lovable.app'
 
     if (error) {
       console.error('OAuth error:', error)
@@ -176,10 +173,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('OAuth callback error:', error)
-    const origin = req.headers.get('origin') || 'https://xjvbxjpiebtvdmxyeuhr.supabase.co'
-    const appUrl = origin.includes('supabase.co') ? 
-      `https://${origin.split('//')[1].split('.')[0]}.lovableproject.com` : 
-      origin
+    const appUrl = 'https://right-place.lovable.app'
     return Response.redirect(`${appUrl}/connections?sumup=error&message=${encodeURIComponent('Unexpected error occurred')}`)
   }
 })
