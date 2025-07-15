@@ -33,30 +33,39 @@ serve(async (req) => {
       )
     }
 
-    console.log('Getting SumUp API key from database...')
-    // Get SumUp API key
-    const { data: apiKey, error: credentialsError } = await supabaseClient
-      .rpc('get_api_credential', { provider_name: 'sumup' })
+    console.log('Getting SumUp credentials from database...')
+    // Get SumUp credentials using the new function
+    const { data: credentials, error: credentialsError } = await supabaseClient
+      .rpc('get_sumup_credentials')
 
-    console.log('API key query result:', { hasApiKey: !!apiKey, error: credentialsError })
+    console.log('Credentials query result:', { hasCredentials: !!credentials, error: credentialsError })
 
     if (credentialsError) {
-      console.error('Error getting SumUp API key:', credentialsError)
+      console.error('Error getting SumUp credentials:', credentialsError)
       return new Response(
-        JSON.stringify({ error: 'SumUp API key not configured', details: credentialsError.message }),
+        JSON.stringify({ error: 'SumUp credentials not configured', details: credentialsError.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    if (!apiKey) {
-      console.error('SumUp API key is null or empty')
+    if (!credentials) {
+      console.error('SumUp credentials are null or empty')
       return new Response(
-        JSON.stringify({ error: 'SumUp API key not found' }),
+        JSON.stringify({ error: 'SumUp credentials not found' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log('API key retrieved successfully, length:', apiKey.length)
+    const { client_id, client_secret } = credentials
+    console.log('Credentials retrieved successfully, client_id length:', client_id?.length)
+
+    if (!client_id || !client_secret) {
+      console.error('Missing client_id or client_secret')
+      return new Response(
+        JSON.stringify({ error: 'SumUp client credentials not properly configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     // Generate state parameter for OAuth security
     const state = crypto.randomUUID()
@@ -88,57 +97,22 @@ serve(async (req) => {
     const redirectUri = `${Deno.env.get('SUPABASE_URL')}/functions/v1/sumup-oauth-callback`
     console.log('Using redirect URI:', redirectUri)
     
-    // Make the OAuth authorization request to SumUp using API key in header
-    console.log('Making OAuth authorization request to SumUp...')
-    const authResponse = await fetch('https://api.sumup.com/authorize', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        response_type: 'code',
-        redirect_uri: redirectUri,
-        scope: 'payments.read',
-        state: state
-      })
+    // Build authorization URL according to SumUp's Authorization Code flow
+    const authParams = new URLSearchParams({
+      response_type: 'code',
+      client_id: client_id,
+      redirect_uri: redirectUri,
+      scope: 'payments.read',
+      state: state
     })
 
-    console.log('SumUp auth response status:', authResponse.status)
-    
-    if (!authResponse.ok) {
-      const errorText = await authResponse.text()
-      console.error('SumUp authorization request failed:', errorText)
-      return new Response(
-        JSON.stringify({ 
-          error: 'Failed to initiate SumUp authorization',
-          details: errorText,
-          status: authResponse.status 
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
+    const authorizationUrl = `https://api.sumup.com/authorize?${authParams.toString()}`
+    console.log('Built authorization URL:', authorizationUrl)
 
-    const authData = await authResponse.json()
-    console.log('SumUp auth response data:', authData)
-
-    // Return the authorization URL from SumUp's response
-    if (authData.authorization_url || authData.url) {
-      const authUrl = authData.authorization_url || authData.url
-      console.log('Authorization URL received:', authUrl)
-      
-      return new Response(
-        JSON.stringify({ authorization_url: authUrl }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    } else {
-      console.error('No authorization URL in response:', authData)
-      return new Response(
-        JSON.stringify({ error: 'No authorization URL received from SumUp' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
+    return new Response(
+      JSON.stringify({ authorization_url: authorizationUrl }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
 
   } catch (error) {
     console.error('OAuth init error:', error)

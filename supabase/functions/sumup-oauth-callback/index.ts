@@ -87,17 +87,17 @@ serve(async (req) => {
 
     const userId = stateData.user_id
 
-    // Get SumUp API key
-    const { data: apiKey, error: credentialsError } = await supabaseClient
-      .rpc('get_api_credential', { provider_name: 'sumup' })
+    // Get SumUp credentials
+    const { data: credentials, error: credentialsError } = await supabaseClient
+      .rpc('get_sumup_credentials')
 
-    if (credentialsError || !apiKey) {
-      console.error('Error getting SumUp API key:', credentialsError)
+    if (credentialsError || !credentials) {
+      console.error('Error getting SumUp credentials:', credentialsError)
       return new Response(`
         <html>
           <body>
             <h1>Configuration Error</h1>
-            <p>SumUp API key not configured</p>
+            <p>SumUp credentials not configured</p>
             <script>
               setTimeout(() => {
                 window.close()
@@ -110,18 +110,40 @@ serve(async (req) => {
       })
     }
 
-    console.log('Exchanging code for token using API key in header...')
+    const { client_id, client_secret } = credentials
 
-    // Exchange authorization code for access token using API key in header
+    if (!client_id || !client_secret) {
+      console.error('Missing client_id or client_secret')
+      return new Response(`
+        <html>
+          <body>
+            <h1>Configuration Error</h1>
+            <p>SumUp client credentials not properly configured</p>
+            <script>
+              setTimeout(() => {
+                window.close()
+              }, 3000)
+            </script>
+          </body>
+        </html>
+      `, {
+        headers: { 'Content-Type': 'text/html' }
+      })
+    }
+
+    console.log('Exchanging code for token using OAuth flow...')
+
+    // Exchange authorization code for access token using proper OAuth flow
     const tokenResponse = await fetch('https://api.sumup.com/token', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'application/json'
       },
-      body: JSON.stringify({
+      body: new URLSearchParams({
         grant_type: 'authorization_code',
+        client_id: client_id,
+        client_secret: client_secret,
         code: code,
         redirect_uri: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sumup-oauth-callback`
       })

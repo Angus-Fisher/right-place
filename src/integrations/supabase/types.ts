@@ -18,6 +18,8 @@ export type Database = {
         Row: {
           additional_config: Json | null
           api_key: string
+          client_id: string | null
+          client_secret: string | null
           created_at: string
           id: string
           provider: string
@@ -26,6 +28,8 @@ export type Database = {
         Insert: {
           additional_config?: Json | null
           api_key: string
+          client_id?: string | null
+          client_secret?: string | null
           created_at?: string
           id?: string
           provider: string
@@ -34,6 +38,8 @@ export type Database = {
         Update: {
           additional_config?: Json | null
           api_key?: string
+          client_id?: string | null
+          client_secret?: string | null
           created_at?: string
           id?: string
           provider?: string
@@ -160,6 +166,10 @@ export type Database = {
       get_api_credential: {
         Args: { provider_name: string }
         Returns: string
+      }
+      get_sumup_credentials: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       upsert_api_credential: {
         Args: { provider_name: string; new_api_key: string; config?: Json }
