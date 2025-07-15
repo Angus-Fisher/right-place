@@ -56,7 +56,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Verify state parameter - get the most recent matching state
+    // Verify state parameter
     const { data: stateData, error: stateError } = await supabaseClient
       .from('user_tokens')
       .select('user_id')
@@ -110,39 +110,21 @@ serve(async (req) => {
       })
     }
 
-    console.log('Exchanging code for token...')
+    console.log('Exchanging code for token using API key in header...')
 
-    // Get SumUp API secret for token exchange
-    const { data: apiSecret, error: secretError } = await supabaseClient
-      .rpc('get_api_credential', { provider_name: 'sumup_secret' })
-
-    if (secretError || !apiSecret) {
-      console.error('SumUp API secret not found - this is required for token exchange')
-      // For now, let's try without the secret and see what happens
-    }
-
-    // Exchange authorization code for access token using authorization code flow
-    const tokenRequestBody = new URLSearchParams({
-      grant_type: 'authorization_code',
-      code: code,
-      redirect_uri: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sumup-oauth-callback`,
-      client_id: apiKey
-    })
-
-    // Add client_secret if available
-    if (apiSecret) {
-      tokenRequestBody.append('client_secret', apiSecret)
-    }
-
-    console.log('Token request body:', tokenRequestBody.toString())
-
+    // Exchange authorization code for access token using API key in header
     const tokenResponse = await fetch('https://api.sumup.com/token', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: tokenRequestBody
+      body: JSON.stringify({
+        grant_type: 'authorization_code',
+        code: code,
+        redirect_uri: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sumup-oauth-callback`
+      })
     })
 
     console.log('Token response status:', tokenResponse.status)
@@ -198,7 +180,7 @@ serve(async (req) => {
       tokenType: tokenData.token_type
     })
 
-    // Store the access token for the user - INSERT instead of UPSERT
+    // Store the access token for the user
     const { error: tokenError } = await supabaseClient
       .from('user_tokens')
       .insert({

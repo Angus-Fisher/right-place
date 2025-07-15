@@ -63,7 +63,7 @@ serve(async (req) => {
     console.log('Generated OAuth state:', state)
 
     console.log('Storing OAuth state in database...')
-    // Store the state in the database for verification - INSERT instead of UPSERT
+    // Store the state in the database for verification
     const { error: stateError } = await supabaseClient
       .from('user_tokens')
       .insert({
@@ -84,28 +84,61 @@ serve(async (req) => {
 
     console.log('OAuth state stored successfully')
 
-    // Build SumUp OAuth URL for authorization code flow
+    // Build redirect URI
     const redirectUri = `${Deno.env.get('SUPABASE_URL')}/functions/v1/sumup-oauth-callback`
-    // Updated scopes - using payments.read which is the correct scope for transaction access
-    const scope = 'payments.read'
+    console.log('Using redirect URI:', redirectUri)
     
-    console.log('Building authorization URL with redirect URI:', redirectUri)
-    console.log('Using scope:', scope)
+    // Make the OAuth authorization request to SumUp using API key in header
+    console.log('Making OAuth authorization request to SumUp...')
+    const authResponse = await fetch('https://api.sumup.com/authorize', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        response_type: 'code',
+        redirect_uri: redirectUri,
+        scope: 'payments.read',
+        state: state
+      })
+    })
+
+    console.log('SumUp auth response status:', authResponse.status)
     
-    const authUrl = new URL('https://api.sumup.com/authorize')
-    authUrl.searchParams.set('response_type', 'code')
-    authUrl.searchParams.set('client_id', apiKey)  // Use API key as client_id
-    authUrl.searchParams.set('redirect_uri', redirectUri)
-    authUrl.searchParams.set('scope', scope)
-    authUrl.searchParams.set('state', state)
+    if (!authResponse.ok) {
+      const errorText = await authResponse.text()
+      console.error('SumUp authorization request failed:', errorText)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to initiate SumUp authorization',
+          details: errorText,
+          status: authResponse.status 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
-    const finalAuthUrl = authUrl.toString()
-    console.log('Final authorization URL created:', finalAuthUrl)
+    const authData = await authResponse.json()
+    console.log('SumUp auth response data:', authData)
 
-    return new Response(
-      JSON.stringify({ authorization_url: finalAuthUrl }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    // Return the authorization URL from SumUp's response
+    if (authData.authorization_url || authData.url) {
+      const authUrl = authData.authorization_url || authData.url
+      console.log('Authorization URL received:', authUrl)
+      
+      return new Response(
+        JSON.stringify({ authorization_url: authUrl }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    } else {
+      console.error('No authorization URL in response:', authData)
+      return new Response(
+        JSON.stringify({ error: 'No authorization URL received from SumUp' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
   } catch (error) {
     console.error('OAuth init error:', error)
