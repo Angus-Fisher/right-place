@@ -102,7 +102,7 @@ serve(async (req) => {
       response_type: 'code',
       client_id: client_id,
       redirect_uri: redirectUri,
-      scope: 'payments.read',
+      scope: 'transactions.history',
       state: state
     })
 
@@ -119,7 +119,7 @@ serve(async (req) => {
     console.log('  - response_type:', 'code')
     console.log('  - client_id:', client_id)
     console.log('  - redirect_uri:', redirectUri)
-    console.log('  - scope:', 'payments.read')
+    console.log('  - scope:', 'transactions.history')
     console.log('  - state:', state)
     console.log('=== END REQUEST DETAILS ===')
 
