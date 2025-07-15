@@ -106,6 +106,7 @@ serve(async (req) => {
     })
 
     console.log('Transactions API response status:', transactionsResponse.status)
+    console.log('Transactions API response headers:', Object.fromEntries(transactionsResponse.headers.entries()))
 
     if (!transactionsResponse.ok) {
       const errorText = await transactionsResponse.text()
@@ -122,7 +123,39 @@ serve(async (req) => {
     }
 
     const transactionsData = await transactionsResponse.json()
-    console.log('Transactions data structure:', Object.keys(transactionsData))
+    
+    // ===== DETAILED LOGGING OF TRANSACTION RESPONSE =====
+    console.log('=== FULL SUMUP TRANSACTIONS RESPONSE ===')
+    console.log('Response status:', transactionsResponse.status)
+    console.log('Response headers:', Object.fromEntries(transactionsResponse.headers.entries()))
+    console.log('Full response body:', JSON.stringify(transactionsData, null, 2))
+    console.log('Response data structure - top level keys:', Object.keys(transactionsData))
+    
+    if (transactionsData.items) {
+      console.log('Found "items" array with length:', transactionsData.items.length)
+      console.log('First item structure (if exists):', transactionsData.items[0] ? Object.keys(transactionsData.items[0]) : 'No items')
+    }
+    
+    if (transactionsData.data) {
+      console.log('Found "data" array with length:', transactionsData.data.length)
+      console.log('First data item structure (if exists):', transactionsData.data[0] ? Object.keys(transactionsData.data[0]) : 'No data items')
+    }
+    
+    if (transactionsData.pagination) {
+      console.log('Pagination info found:', JSON.stringify(transactionsData.pagination, null, 2))
+    }
+    
+    if (transactionsData.meta) {
+      console.log('Meta info found:', JSON.stringify(transactionsData.meta, null, 2))
+    }
+    
+    // Check if response is directly an array
+    if (Array.isArray(transactionsData)) {
+      console.log('Response is a direct array with length:', transactionsData.length)
+      console.log('First array item structure (if exists):', transactionsData[0] ? Object.keys(transactionsData[0]) : 'No items in array')
+    }
+    
+    console.log('=== END FULL SUMUP TRANSACTIONS RESPONSE ===')
     
     return processTransactions(transactionsData, user_id, supabaseClient)
 
