@@ -23,11 +23,14 @@ export const SumUpConnection = () => {
     if (!user) return;
     
     try {
+      // Get the most recent SumUp token for this user
       const { data, error } = await supabase
         .from('user_tokens')
         .select('*')
         .eq('provider', 'sumup')
         .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (error) {
@@ -89,6 +92,7 @@ export const SumUpConnection = () => {
     setIsLoading(true);
     
     try {
+      // Delete all SumUp tokens for this user
       const { error } = await supabase
         .from('user_tokens')
         .delete()

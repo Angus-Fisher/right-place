@@ -63,10 +63,10 @@ serve(async (req) => {
     console.log('Generated OAuth state:', state)
 
     console.log('Storing OAuth state in database...')
-    // Store the state in the database for verification
+    // Store the state in the database for verification - INSERT instead of UPSERT
     const { error: stateError } = await supabaseClient
       .from('user_tokens')
-      .upsert({
+      .insert({
         user_id,
         provider: 'sumup_oauth_state',
         access_token: state,

@@ -56,13 +56,15 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Verify state parameter
+    // Verify state parameter - get the most recent matching state
     const { data: stateData, error: stateError } = await supabaseClient
       .from('user_tokens')
       .select('user_id')
       .eq('provider', 'sumup_oauth_state')
       .eq('access_token', state)
-      .single()
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
     if (stateError || !stateData) {
       console.error('Invalid state parameter:', stateError)
@@ -155,10 +157,10 @@ serve(async (req) => {
     const tokenData = await tokenResponse.json()
     console.log('Token data received:', { hasAccessToken: !!tokenData.access_token })
 
-    // Store the access token for the user
+    // Store the access token for the user - INSERT instead of UPSERT
     const { error: tokenError } = await supabaseClient
       .from('user_tokens')
-      .upsert({
+      .insert({
         user_id: userId,
         provider: 'sumup',
         access_token: tokenData.access_token,
@@ -171,7 +173,7 @@ serve(async (req) => {
         updated_at: new Date().toISOString()
       })
 
-    // Clean up the OAuth state
+    // Clean up the OAuth state tokens
     await supabaseClient
       .from('user_tokens')
       .delete()

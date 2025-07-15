@@ -27,13 +27,15 @@ serve(async (req) => {
       )
     }
 
-    // Get user's SumUp access token (from authorization code flow)
+    // Get user's most recent SumUp access token
     const { data: tokenData, error: tokenError } = await supabaseClient
       .from('user_tokens')
       .select('access_token, token_type')
       .eq('user_id', user_id)
       .eq('provider', 'sumup')
-      .single()
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
     if (tokenError || !tokenData) {
       return new Response(
