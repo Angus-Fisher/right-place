@@ -51,12 +51,34 @@ serve(async (req) => {
       })
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    // Create Supabase client with service role key for admin operations
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing Supabase environment variables')
+      return new Response(`
+        <html>
+          <body>
+            <h1>Configuration Error</h1>
+            <p>Missing Supabase configuration</p>
+            <script>
+              setTimeout(() => {
+                window.close()
+              }, 3000)
+            </script>
+          </body>
+        </html>
+      `, {
+        headers: { 'Content-Type': 'text/html' }
+      })
+    }
+
+    console.log('Creating Supabase client with service role key')
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey)
 
     // Verify state parameter
+    console.log('Verifying OAuth state parameter:', state)
     const { data: stateData, error: stateError } = await supabaseClient
       .from('user_tokens')
       .select('user_id')
@@ -66,8 +88,27 @@ serve(async (req) => {
       .limit(1)
       .maybeSingle()
 
-    if (stateError || !stateData) {
-      console.error('Invalid state parameter:', stateError)
+    if (stateError) {
+      console.error('Error verifying state parameter:', stateError)
+      return new Response(`
+        <html>
+          <body>
+            <h1>Authorization Failed</h1>
+            <p>Error verifying state parameter: ${stateError.message}</p>
+            <script>
+              setTimeout(() => {
+                window.close()
+              }, 3000)
+            </script>
+          </body>
+        </html>
+      `, {
+        headers: { 'Content-Type': 'text/html' }
+      })
+    }
+
+    if (!stateData) {
+      console.error('Invalid state parameter - no matching record found')
       return new Response(`
         <html>
           <body>
@@ -86,8 +127,10 @@ serve(async (req) => {
     }
 
     const userId = stateData.user_id
+    console.log('Found user ID for OAuth state:', userId)
 
     // Get SumUp credentials
+    console.log('Getting SumUp credentials...')
     const { data: credentials, error: credentialsError } = await supabaseClient
       .rpc('get_sumup_credentials')
 
@@ -120,7 +163,7 @@ serve(async (req) => {
             <h1>Configuration Error</h1>
             <p>SumUp client credentials not properly configured</p>
             <script>
-              setTimeout(() => {
+              setTimeout () => {
                 window.close()
               }, 3000)
             </script>
@@ -131,21 +174,37 @@ serve(async (req) => {
       })
     }
 
-    console.log('Exchanging code for token using OAuth flow...')
+    console.log('Exchanging authorization code for access token...')
 
-    // Exchange authorization code for access token using proper OAuth flow
+    // Create Basic Auth header
+    const basicAuth = btoa(`${client_id}:${client_secret}`)
+    const redirectUri = `${supabaseUrl}/functions/v1/sumup-oauth-callback`
+
+    console.log('=== TOKEN EXCHANGE REQUEST DETAILS ===')
+    console.log('Method: POST')
+    console.log('URL: https://api.sumup.com/token')
+    console.log('Headers:')
+    console.log('  - Content-Type: application/x-www-form-urlencoded')
+    console.log('  - Accept: application/json')
+    console.log('  - Authorization: Basic [REDACTED]')
+    console.log('Body parameters:')
+    console.log('  - grant_type: authorization_code')
+    console.log('  - code:', code)
+    console.log('  - redirect_uri:', redirectUri)
+    console.log('=== END REQUEST DETAILS ===')
+
+    // Exchange authorization code for access token
     const tokenResponse = await fetch('https://api.sumup.com/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'Authorization': `Basic ${basicAuth}`
       },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
-        client_id: client_id,
-        client_secret: client_secret,
         code: code,
-        redirect_uri: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sumup-oauth-callback`
+        redirect_uri: redirectUri
       })
     })
 
@@ -203,6 +262,7 @@ serve(async (req) => {
     })
 
     // Store the access token for the user
+    console.log('Storing access token for user:', userId)
     const { error: tokenError } = await supabaseClient
       .from('user_tokens')
       .insert({
@@ -213,17 +273,10 @@ serve(async (req) => {
         token_type: tokenData.token_type || 'Bearer',
         expires_at: tokenData.expires_in ? 
           new Date(Date.now() + tokenData.expires_in * 1000).toISOString() : null,
-        scope: tokenData.scope || 'payments.read',
+        scope: tokenData.scope || 'transactions.history',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
-
-    // Clean up the OAuth state tokens
-    await supabaseClient
-      .from('user_tokens')
-      .delete()
-      .eq('provider', 'sumup_oauth_state')
-      .eq('access_token', state)
 
     if (tokenError) {
       console.error('Error storing token:', tokenError)
@@ -231,7 +284,7 @@ serve(async (req) => {
         <html>
           <body>
             <h1>Storage Error</h1>
-            <p>Failed to store access token</p>
+            <p>Failed to store access token: ${tokenError.message}</p>
             <script>
               setTimeout(() => {
                 window.close()
@@ -244,13 +297,23 @@ serve(async (req) => {
       })
     }
 
+    // Clean up the OAuth state tokens
+    console.log('Cleaning up OAuth state tokens')
+    await supabaseClient
+      .from('user_tokens')
+      .delete()
+      .eq('provider', 'sumup_oauth_state')
+      .eq('access_token', state)
+
+    console.log('OAuth flow completed successfully')
+
     // Success page
     return new Response(`
       <html>
         <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
           <h1 style="color: #10b981;">SumUp Connected Successfully!</h1>
-          <p>Your SumUp account has been connected with scope: ${tokenData.scope || 'payments.read'}</p>
-          <p>You can now close this window.</p>
+          <p>Your SumUp account has been connected with scope: ${tokenData.scope || 'transactions.history'}</p>
+          <p>You can now close this window and return to the application.</p>
           <script>
             setTimeout(() => {
               window.close()
