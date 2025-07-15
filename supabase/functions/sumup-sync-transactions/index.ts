@@ -97,8 +97,13 @@ serve(async (req) => {
 
     console.log('Found merchant_code:', merchantCode)
 
-    // Step 2: Fetch transactions using the merchant_code
-    const transactionsEndpoint = `https://api.sumup.com/v2.1/merchants/${merchantCode}/transactions/history`
+    // Step 2: Fetch transactions using the merchant_code with query parameters
+    const queryParams = new URLSearchParams({
+      limit: '50',
+      statuses: 'SUCCESSFUL'
+    })
+    
+    const transactionsEndpoint = `https://api.sumup.com/v2.1/merchants/${merchantCode}/transactions/history?${queryParams.toString()}`
     console.log('Step 2: Fetching transactions from:', transactionsEndpoint)
 
     const transactionsResponse = await fetch(transactionsEndpoint, {
