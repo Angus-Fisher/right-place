@@ -112,12 +112,27 @@ serve(async (req) => {
 
     console.log('Exchanging code for token...')
 
+    // Get SumUp API secret for token exchange
+    const { data: apiSecret, error: secretError } = await supabaseClient
+      .rpc('get_api_credential', { provider_name: 'sumup_secret' })
+
+    if (secretError || !apiSecret) {
+      console.error('SumUp API secret not found - this is required for token exchange')
+      // For now, let's try without the secret and see what happens
+    }
+
     // Exchange authorization code for access token using authorization code flow
     const tokenRequestBody = new URLSearchParams({
       grant_type: 'authorization_code',
       code: code,
-      redirect_uri: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sumup-oauth-callback`
+      redirect_uri: `${Deno.env.get('SUPABASE_URL')}/functions/v1/sumup-oauth-callback`,
+      client_id: apiKey
     })
+
+    // Add client_secret if available
+    if (apiSecret) {
+      tokenRequestBody.append('client_secret', apiSecret)
+    }
 
     console.log('Token request body:', tokenRequestBody.toString())
 
@@ -125,23 +140,24 @@ serve(async (req) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Bearer ${apiKey}`,
         'Accept': 'application/json'
       },
       body: tokenRequestBody
     })
 
     console.log('Token response status:', tokenResponse.status)
+    const responseText = await tokenResponse.text()
+    console.log('Token response body:', responseText)
 
     if (!tokenResponse.ok) {
-      const errorText = await tokenResponse.text()
-      console.error('Token exchange failed:', errorText)
+      console.error('Token exchange failed:', responseText)
       return new Response(`
         <html>
           <body>
             <h1>Token Exchange Failed</h1>
             <p>Failed to exchange authorization code for access token</p>
-            <p>Error: ${errorText}</p>
+            <p>Status: ${tokenResponse.status}</p>
+            <p>Error: ${responseText}</p>
             <script>
               setTimeout(() => {
                 window.close()
@@ -154,8 +170,33 @@ serve(async (req) => {
       })
     }
 
-    const tokenData = await tokenResponse.json()
-    console.log('Token data received:', { hasAccessToken: !!tokenData.access_token })
+    let tokenData
+    try {
+      tokenData = JSON.parse(responseText)
+    } catch (parseError) {
+      console.error('Failed to parse token response:', parseError)
+      return new Response(`
+        <html>
+          <body>
+            <h1>Token Parse Error</h1>
+            <p>Failed to parse token response</p>
+            <script>
+              setTimeout(() => {
+                window.close()
+              }, 3000)
+            </script>
+          </body>
+        </html>
+      `, {
+        headers: { 'Content-Type': 'text/html' }
+      })
+    }
+
+    console.log('Token data received:', { 
+      hasAccessToken: !!tokenData.access_token,
+      scope: tokenData.scope,
+      tokenType: tokenData.token_type
+    })
 
     // Store the access token for the user - INSERT instead of UPSERT
     const { error: tokenError } = await supabaseClient
@@ -165,10 +206,10 @@ serve(async (req) => {
         provider: 'sumup',
         access_token: tokenData.access_token,
         refresh_token: tokenData.refresh_token,
-        token_type: tokenData.token_type,
+        token_type: tokenData.token_type || 'Bearer',
         expires_at: tokenData.expires_in ? 
           new Date(Date.now() + tokenData.expires_in * 1000).toISOString() : null,
-        scope: tokenData.scope,
+        scope: tokenData.scope || 'payments.read',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -204,7 +245,8 @@ serve(async (req) => {
       <html>
         <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
           <h1 style="color: #10b981;">SumUp Connected Successfully!</h1>
-          <p>Your SumUp account has been connected. You can now close this window.</p>
+          <p>Your SumUp account has been connected with scope: ${tokenData.scope || 'payments.read'}</p>
+          <p>You can now close this window.</p>
           <script>
             setTimeout(() => {
               window.close()
@@ -223,6 +265,7 @@ serve(async (req) => {
         <body>
           <h1>Authorization Error</h1>
           <p>An unexpected error occurred during authorization</p>
+          <p>Error: ${error.message}</p>
           <script>
             setTimeout(() => {
               window.close()
