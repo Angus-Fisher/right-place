@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield, Building, Eye, EyeOff } from 'lucide-react';
+import { Building, Eye, EyeOff, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export const AuthPage = () => {
@@ -99,11 +99,11 @@ export const AuthPage = () => {
         <Card className="shadow-xl border-0">
           <CardHeader className="space-y-1 pb-6">
             <div className="flex items-center justify-center mb-4">
-              <Shield className="h-6 w-6 text-blue-600" />
+              <User className="h-6 w-6 text-blue-600" />
             </div>
-            <CardTitle className="text-2xl text-center">Secure Access</CardTitle>
+            <CardTitle className="text-2xl text-center">Account Access</CardTitle>
             <CardDescription className="text-center text-gray-600">
-              Access your financial dashboard securely
+              Access your financial dashboard
             </CardDescription>
           </CardHeader>
           
@@ -245,8 +245,8 @@ export const AuthPage = () => {
 
             <div className="mt-6 text-center text-sm text-gray-500">
               <div className="flex items-center justify-center space-x-1">
-                <Shield className="h-4 w-4" />
-                <span>Bank-grade security & encryption</span>
+                <Building className="h-4 w-4" />
+                <span>Professional banking platform</span>
               </div>
             </div>
           </CardContent>
