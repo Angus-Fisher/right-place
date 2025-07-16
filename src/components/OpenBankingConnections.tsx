@@ -2,7 +2,7 @@
 import React from 'react';
 import { SumUpConnection } from './SumUpConnection';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Banknote, Shield, Zap } from 'lucide-react';
+import { Banknote, Zap, Users } from 'lucide-react';
 
 export const OpenBankingConnections = () => {
   return (
@@ -10,18 +10,18 @@ export const OpenBankingConnections = () => {
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900 mb-4">Connect Your Accounts</h1>
         <p className="text-gray-600 max-w-2xl mx-auto">
-          Securely connect your financial accounts to view all your transactions in one place. 
-          Your data is protected with bank-level security.
+          Connect your financial accounts to view all your transactions in one place. 
+          Get a unified view of your finances across multiple platforms.
         </p>
       </div>
 
-      {/* Security Features */}
+      {/* Features */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <Card className="text-center">
           <CardContent className="pt-6">
-            <Shield className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-            <h3 className="font-semibold mb-1">Bank-Level Security</h3>
-            <p className="text-sm text-gray-600">256-bit encryption and OAuth2 authentication</p>
+            <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+            <h3 className="font-semibold mb-1">Easy Integration</h3>
+            <p className="text-sm text-gray-600">Simple connection process with popular platforms</p>
           </CardContent>
         </Card>
         

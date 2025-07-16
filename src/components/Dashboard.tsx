@@ -19,7 +19,7 @@ export const Dashboard = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Financial Dashboard</h2>
-          <p className="text-gray-600">Manage your finances with confidence</p>
+          <p className="text-gray-600">Manage your finances with ease</p>
         </div>
 
         {/* Welcome Message */}
@@ -27,19 +27,19 @@ export const Dashboard = () => {
           <CardHeader>
             <CardTitle>Welcome to Right Place</CardTitle>
             <CardDescription>
-              Your secure open banking platform is ready to use
+              Your open banking platform is ready to use
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-gray-600 mb-4">
               You've successfully logged into your Right Place dashboard. Here you can manage your financial accounts, 
-              view transactions, and access various banking services securely.
+              view transactions, and access various banking services.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 bg-blue-50 rounded-lg">
-                <h4 className="font-semibold text-blue-900 mb-2">Bank-Grade Security</h4>
+                <h4 className="font-semibold text-blue-900 mb-2">Simple Integration</h4>
                 <p className="text-sm text-blue-700">
-                  Your data is protected with the same level of security used by major financial institutions.
+                  Connect your accounts quickly and easily with our streamlined process.
                 </p>
               </div>
               <div className="p-4 bg-green-50 rounded-lg">
